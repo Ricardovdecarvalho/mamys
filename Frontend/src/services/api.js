@@ -1,20 +1,30 @@
-// src/services/api.js
+// App.jsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Dashboard from '@/components/Dashboard';
+import PageList from '@/components/pages/PageList';
+import PageDetails from '@/components/pages/PageDetails'; // Importe o componente
+import Login from '@/components/Login';
+import Register from '@/components/Register';
+import PrivateRoute from '@/components/PrivateRoute';
 
-import axios from 'axios';
+const App = () => {
+    return (
+        <BrowserRouter>
+            <Routes>
+                {/* Rotas públicas */}
+                <Route path="/" element={<Login />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-const API_BASE_URL = 'http://localhost:5000'; // Substitua pela URL correta da API
-
-export const getClonedPages = async () => {
-  const response = await axios.get(`${API_BASE_URL}/pages`);
-  return response.data;
+                {/* Rotas protegidas */}
+                <Route element={<PrivateRoute />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/pages" element={<PageList />} />
+                    <Route path="/page-details/:id" element={<PageDetails />} /> {/* Nova rota */}
+                </Route>
+            </Routes>
+        </BrowserRouter>
+    );
 };
 
-export const getPageDetails = async (pageId) => {
-  const response = await axios.get(`${API_BASE_URL}/pages/${pageId}`);
-  return response.data;
-};
-
-export const updatePageDetails = async (pageId, pageData) => {
-  const response = await axios.put(`${API_BASE_URL}/pages/${pageId}`, pageData);
-  return response.data;
-};
+export default App;

@@ -2,11 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Users, FileText, Link, Home, MessageSquare, HelpCircle, Globe, Database, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '@/services/axios';
+import ProfileModal from '@/components/ProfileModal';
+import ClonePageModal from '@/components/ClonePageModal';
 
-// Se você tiver estes dois modais:
-import ProfileModal from './ProfileModal';
-import ClonePageModal from './ClonePageModal';
+
 
 const Dashboard = () => {
     const [userRole, setUserRole] = useState('');
@@ -14,31 +14,27 @@ const Dashboard = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
-
-    // Array de páginas clonadas — caso precise para outra lógica,
-    // mas não exibiremos no sidebar
     const [clonedPages, setClonedPages] = useState([]);
-
-    // Apenas para mostrar alguma mensagem de feedback (opcional)
     const [feedback, setFeedback] = useState('');
+    const [refreshKey, setRefreshKey] = useState(0);
+
+    // Dados do usuário
+    const userData = JSON.parse(localStorage.getItem('userData')) || {};
+    const fullName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
 
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Carrega páginas clonadas ao montar (se quiser usar em outro lugar)
         const fetchPages = async () => {
             try {
-                // GET /api/pages/list retorna um array de páginas
-                const response = await axios.get('http://localhost:3002/api/pages/list');
-                setClonedPages(response.data); // Ex: [{ id, url, cloneUrl }, ...]
+                const response = await api.get('/pages/list');
+                setClonedPages(response.data);
             } catch (error) {
                 console.error('Erro ao carregar páginas clonadas:', error);
             }
         };
-
         fetchPages();
 
-        // Verifica role do usuário e tema
         const role = localStorage.getItem('userRole');
         const theme = localStorage.getItem('theme');
         if (!role) {
@@ -47,9 +43,8 @@ const Dashboard = () => {
         setUserRole(role);
         setDarkMode(theme === 'dark');
         document.documentElement.classList.toggle('dark', theme === 'dark');
-    }, [navigate]);
+    }, [navigate, refreshKey]);
 
-    // Fecha dropdown ao clicar fora (se estiver usando menus suspensos)
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (isDropdownOpen && !event.target.closest('.dropdown-container')) {
@@ -62,7 +57,6 @@ const Dashboard = () => {
         };
     }, [isDropdownOpen]);
 
-    // Alterna tema
     const handleThemeChange = () => {
         const newTheme = !darkMode;
         setDarkMode(newTheme);
@@ -71,34 +65,25 @@ const Dashboard = () => {
         setIsDropdownOpen(false);
     };
 
-    // Logout
     const handleLogout = () => {
         localStorage.removeItem('userRole');
         localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('userData');
+        localStorage.removeItem('token');
         navigate('/login');
     };
 
-    // Abre modal de clonagem
     const handleClonePage = () => {
         setIsCloneModalOpen(true);
     };
 
-    // Quando a clonagem é bem-sucedida no modal
     const handleCloneSuccess = (pageData) => {
-        // pageData = { id, url, cloneUrl } retornado pelo backend
         setFeedback('Página clonada com sucesso!');
-
-        // Abre imediatamente em outra aba
         window.open(pageData.cloneUrl, '_blank');
-
-        // Adiciona no array, se ainda não existir
-        const exists = clonedPages.find((p) => p.id === pageData.id);
-        if (!exists) {
-            setClonedPages((prev) => [pageData, ...prev]);
-        }
+        setRefreshKey(old => old + 1); // Força atualização da lista
+        setClonedPages(prev => [pageData, ...prev]); // Atualiza lista imediatamente
     };
 
-    // Exemplo de estatísticas fictícias
     const stats = {
         commission: 'R$ 0,00',
         pendingTransactions: 0,
@@ -106,7 +91,6 @@ const Dashboard = () => {
         pageViews: 0
     };
 
-    // Item do Sidebar
     const SidebarItem = ({ icon: Icon, text, isNew, onClick }) => (
         <div
             onClick={onClick}
@@ -122,13 +106,11 @@ const Dashboard = () => {
         </div>
     );
 
-    // Barra lateral (sem exibir páginas clonadas)
     const Sidebar = () => (
         <div className="w-64 h-screen bg-white dark:bg-gray-900 p-4 border-r border-gray-200 dark:border-gray-700">
             <div className="mb-8">
                 <h1 className="text-2xl text-gray-800 dark:text-white font-bold">Dashboard</h1>
             </div>
-
             <div className="space-y-2">
                 <div onClick={() => navigate('/dashboard')}>
                     <SidebarItem icon={Home} text="Resumo" />
@@ -146,7 +128,6 @@ const Dashboard = () => {
         </div>
     );
 
-    // Cabeçalho
     const Header = () => (
         <div className="flex justify-between items-center p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <div className="flex space-x-4">
@@ -167,31 +148,78 @@ const Dashboard = () => {
                 </button>
             </div>
 
-            <div className="flex items-center space-x-4">
-                <div className="flex items-center mr-4">
-                    <span className="text-sm text-gray-700 dark:text-gray-300 mr-2">
-                        {darkMode ? 'Dark' : 'Light'}
-                    </span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={darkMode}
-                            onChange={handleThemeChange}
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 
-              dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full 
-              peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] 
-              after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 
-              after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+            <div className="relative dropdown-container">
+                <button
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="flex items-center space-x-3 focus:outline-none"
+                >
+                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
+                        {userData.firstName ? userData.firstName[0].toUpperCase() : 'U'}
+                    </div>
+                    <div className="text-left hidden md:block">
+                        <div className="text-gray-700 dark:text-white font-medium">
+                            {fullName || 'Usuário'}
                         </div>
-                    </label>
-                </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {userData.email || 'email@example.com'}
+                        </div>
+                    </div>
+                </button>
+
+                {isDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-20">
+                        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                            <div className="font-semibold text-gray-900 dark:text-white">
+                                {fullName || 'Usuário'}
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {userData.email || 'email@example.com'}
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                setIsDropdownOpen(false);
+                                setIsProfileModalOpen(true);
+                            }}
+                            className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
+                        >
+                            Meus dados
+                        </button>
+
+                        <button
+                            onClick={handleThemeChange}
+                            className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
+                        >
+                            {darkMode ? 'Modo claro' : 'Modo escuro'}
+                        </button>
+
+                        <button
+                            disabled
+                            className="block w-full text-left px-4 py-2 text-gray-400 dark:text-gray-500 hover:cursor-not-allowed"
+                        >
+                            Financeiro
+                        </button>
+
+                        <button
+                            disabled
+                            className="block w-full text-left px-4 py-2 text-gray-400 dark:text-gray-500 hover:cursor-not-allowed"
+                        >
+                            Meu plano
+                        </button>
+
+                        <button
+                            onClick={handleLogout}
+                            className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
+                        >
+                            Sair da conta
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
 
-    // Cartão de estatísticas
     const StatsCard = ({ title, value, icon: Icon }) => (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex justify-between items-center mb-4">
@@ -217,11 +245,12 @@ const Dashboard = () => {
                     )}
 
                     <div className="mb-8">
-                        <h2 className="text-2xl text-gray-800 dark:text-white mb-4">Primeiros passos</h2>
+                        <h2 className="text-2xl text-gray-800 dark:text-white mb-4">
+                            Primeiros passos
+                        </h2>
                         <p className="text-gray-600 dark:text-gray-300 mb-4">
                             Vamos configurar sua estrutura? Aqui estão alguns atalhos para você começar:
                         </p>
-
                         <div className="space-y-4">
                             <button
                                 onClick={handleClonePage}
@@ -255,7 +284,6 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Modais (opcionais) */}
             <ProfileModal
                 isOpen={isProfileModalOpen}
                 onClose={() => setIsProfileModalOpen(false)}

@@ -1,12 +1,14 @@
 // ClonePageModal.jsx
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/axios';
+import { useNavigate } from 'react-router-dom';
 
 const ClonePageModal = ({ isOpen, onClose, onCloneSuccess }) => {
     const [url, setUrl] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,28 +22,22 @@ const ClonePageModal = ({ isOpen, onClose, onCloneSuccess }) => {
         setSuccess('');
 
         try {
-            // Faz POST para o endpoint de clonagem
-            const response = await axios.post('http://localhost:3002/api/pages/clone', {
+            const response = await api.post('/pages/clone', {
                 targetUrl: url
             });
 
             if (response.data.success) {
-                // O backend retorna algo como:
-                // { success: true, page: { id, url, cloneUrl } }
                 setSuccess('Página clonada com sucesso!');
-
-                // Chamamos o callback passando a "page" completa
-                // Caso você queira só o cloneUrl, use response.data.page.cloneUrl
                 onCloneSuccess?.(response.data.page);
 
-                // Fecha o modal após 2 segundos
+                // Após clonar, aguardar um pouco e redirecionar
                 setTimeout(() => {
                     setSuccess('');
                     onClose();
                     setUrl('');
+                    navigate('/pages'); // Redireciona para a lista de páginas
+                    window.location.reload(); // Força atualização da página
                 }, 2000);
-            } else {
-                setError(response.data.error || 'Erro ao clonar página');
             }
         } catch (err) {
             console.error('Erro completo:', err);
@@ -57,7 +53,6 @@ const ClonePageModal = ({ isOpen, onClose, onCloneSuccess }) => {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
             <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md p-6 relative">
-                {/* Botão de fechar (X) */}
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -71,14 +66,12 @@ const ClonePageModal = ({ isOpen, onClose, onCloneSuccess }) => {
                     Clonar Página
                 </h2>
 
-                {/* Exibe mensagem de erro, se houver */}
                 {error && (
                     <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
                         {error}
                     </div>
                 )}
 
-                {/* Exibe mensagem de sucesso, se houver */}
                 {success && (
                     <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
                         {success}
@@ -130,10 +123,7 @@ const ClonePageModal = ({ isOpen, onClose, onCloneSuccess }) => {
                                     <path
                                         className="opacity-75"
                                         fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 
-                      0 0 5.373 0 12h4zm2 5.291A7.962 
-                      7.962 0 014 12H0c0 3.042 1.135 
-                      5.824 3 7.938l3-2.647z"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                     ></path>
                                 </svg>
                                 Clonando página...

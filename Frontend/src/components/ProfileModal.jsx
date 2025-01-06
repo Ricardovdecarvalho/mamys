@@ -1,63 +1,152 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const ProfileModal = ({ isOpen, onClose }) => {
     const [userData, setUserData] = useState({
-        firstName: 'Miqueias',
-        lastName: 'de souza',
-        birthDate: '13/08/1993',
-        email: 'lojavilleshopping@gmail.com',
-        phone: '(11)95444-3444'
-    });
-
-    const [passwords, setPasswords] = useState({
-        current: '',
-        new: '',
-        confirm: ''
+        firstName: '',
+        lastName: '',
+        birthDate: '',
+        email: '',
+        phone: '',
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
     });
 
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
+            const storedUser = JSON.parse(localStorage.getItem('userData'));
+            if (storedUser) {
+                setUserData(prev => ({
+                    ...prev,
+                    firstName: storedUser.firstName || '',
+                    lastName: storedUser.lastName || '',
+                    birthDate: formatDateForInput(storedUser.birthDate) || '',
+                    email: storedUser.email || '',
+                    phone: storedUser.phone || ''
+                }));
+            }
         }
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
     }, [isOpen]);
 
+    const formatDateForInput = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0];
+    };
+
     const handleUserDataChange = (e) => {
-        setUserData({
-            ...userData,
-            [e.target.name]: e.target.value
-        });
+        const { name, value } = e.target;
+        setUserData(prev => ({
+            ...prev,
+            [name]: value
+        }));
     };
 
-    const handlePasswordChange = (e) => {
-        setPasswords({
-            ...passwords,
-            [e.target.name]: e.target.value
-        });
-    };
-
-    const handleSaveData = (e) => {
+    const handleSaveData = async (e) => {
         e.preventDefault();
-        setSuccessMsg('Dados salvos com sucesso!');
-        setTimeout(() => setSuccessMsg(''), 3000);
+        setLoading(true);
+        setErrorMsg('');
+        setSuccessMsg('');
+
+        try {
+            const token = localStorage.getItem('token');
+            console.log('Token recuperado para atualização do perfil:', token); // Log para debug
+
+            if (!token) {
+                setErrorMsg('Token não encontrado. Por favor, faça login novamente.');
+                setLoading(false);
+                return;
+            }
+
+            const response = await axios.put(
+                'http://localhost:3002/api/users/profile',
+                {
+                    firstName: userData.firstName,
+                    lastName: userData.lastName,
+                    birthDate: userData.birthDate,
+                    phone: userData.phone
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data.success) {
+                const updatedUser = response.data.user;
+                localStorage.setItem('userData', JSON.stringify(updatedUser));
+
+                setSuccessMsg('Dados salvos com sucesso!');
+                setTimeout(() => {
+                    setSuccessMsg('');
+                }, 3000);
+            }
+        } catch (error) {
+            console.error('Erro completo:', error);
+            setErrorMsg(error.response?.data?.error || 'Erro ao salvar alterações');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleChangePassword = (e) => {
+    const handleChangePassword = async (e) => {
         e.preventDefault();
-        if (passwords.new !== passwords.confirm) {
+        setLoading(true);
+        setErrorMsg('');
+        setSuccessMsg('');
+
+        if (userData.newPassword !== userData.confirmPassword) {
             setErrorMsg('As senhas não coincidem');
+            setLoading(false);
             return;
         }
-        setSuccessMsg('Senha alterada com sucesso!');
-        setPasswords({ current: '', new: '', confirm: '' });
-        setTimeout(() => setSuccessMsg(''), 3000);
+
+        try {
+            const token = localStorage.getItem('token');
+            console.log('Token recuperado para alteração de senha:', token); // Log para debug
+
+            if (!token) {
+                setErrorMsg('Token não encontrado. Por favor, faça login novamente.');
+                setLoading(false);
+                return;
+            }
+
+            const response = await axios.put(
+                'http://localhost:3002/api/auth/change-password',
+                {
+                    currentPassword: userData.currentPassword,
+                    newPassword: userData.newPassword
+                },
+                {
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
+
+            if (response.data.success) {
+                setSuccessMsg('Senha alterada com sucesso!');
+                setUserData(prev => ({
+                    ...prev,
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: ''
+                }));
+
+                setTimeout(() => {
+                    setSuccessMsg('');
+                }, 3000);
+            }
+        } catch (error) {
+            setErrorMsg(error.response?.data?.error || 'Erro ao alterar senha');
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -92,6 +181,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
                         </div>
                     )}
 
+                    {/* Formulário de dados básicos */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
                         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                             Dados básicos
@@ -108,6 +198,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
                                         value={userData.firstName}
                                         onChange={handleUserDataChange}
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
+                                        required
                                     />
                                 </div>
                                 <div>
@@ -120,66 +211,63 @@ const ProfileModal = ({ isOpen, onClose }) => {
                                         value={userData.lastName}
                                         onChange={handleUserDataChange}
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
+                                        required
                                     />
                                 </div>
                             </div>
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Data de nascimento
                                 </label>
                                 <input
-                                    type="text"
+                                    type="date"
                                     name="birthDate"
                                     value={userData.birthDate}
                                     onChange={handleUserDataChange}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
+                                    required
                                 />
                             </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Telefone
+                                </label>
+                                <input
+                                    type="tel"
+                                    name="phone"
+                                    value={userData.phone}
+                                    onChange={handleUserDataChange}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
+                                />
+                            </div>
+
                             <button
                                 type="submit"
-                                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                                disabled={loading}
+                                className={`bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
-                                Salvar
+                                {loading ? 'Salvando...' : 'Salvar alterações'}
                             </button>
                         </form>
                     </div>
 
+                    {/* Seção de email (somente leitura) */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
                         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                             E-mail
                         </h2>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                E-mail
-                            </label>
-                            <input
-                                type="email"
-                                value={userData.email}
-                                onChange={handleUserDataChange}
-                                name="email"
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
-                            />
-                        </div>
+                        <input
+                            type="email"
+                            value={userData.email}
+                            readOnly
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2 bg-gray-100 dark:bg-gray-600"
+                        />
                     </div>
 
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                            Telefone
-                        </h2>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Telefone
-                            </label>
-                            <input
-                                type="tel"
-                                value={userData.phone}
-                                onChange={handleUserDataChange}
-                                name="phone"
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
-                            />
-                        </div>
-                    </div>
-
+                    {/* Seção de alteração de senha */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                             Alterar senha
@@ -191,10 +279,11 @@ const ProfileModal = ({ isOpen, onClose }) => {
                                 </label>
                                 <input
                                     type="password"
-                                    name="current"
-                                    value={passwords.current}
-                                    onChange={handlePasswordChange}
+                                    name="currentPassword"
+                                    value={userData.currentPassword}
+                                    onChange={handleUserDataChange}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
+                                    required
                                 />
                             </div>
                             <div>
@@ -203,29 +292,33 @@ const ProfileModal = ({ isOpen, onClose }) => {
                                 </label>
                                 <input
                                     type="password"
-                                    name="new"
-                                    value={passwords.new}
-                                    onChange={handlePasswordChange}
+                                    name="newPassword"
+                                    value={userData.newPassword}
+                                    onChange={handleUserDataChange}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
+                                    required
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Confirmar senha
+                                    Confirmar nova senha
                                 </label>
                                 <input
                                     type="password"
-                                    name="confirm"
-                                    value={passwords.confirm}
-                                    onChange={handlePasswordChange}
+                                    name="confirmPassword"
+                                    value={userData.confirmPassword}
+                                    onChange={handleUserDataChange}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
+                                    required
                                 />
                             </div>
                             <button
                                 type="submit"
-                                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                                disabled={loading}
+                                className={`bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
-                                Alterar senha
+                                {loading ? 'Alterando...' : 'Alterar senha'}
                             </button>
                         </form>
                     </div>
