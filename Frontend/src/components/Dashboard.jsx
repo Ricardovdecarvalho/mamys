@@ -5,8 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/services/axios';
 import ProfileModal from '@/components/ProfileModal';
 import ClonePageModal from '@/components/ClonePageModal';
-
-
+import Header from '@/components/Header'; // Importando o Header
 
 const Dashboard = () => {
     const [userRole, setUserRole] = useState('');
@@ -91,10 +90,11 @@ const Dashboard = () => {
         pageViews: 0
     };
 
-    const SidebarItem = ({ icon: Icon, text, isNew, onClick }) => (
+    const SidebarItem = ({ icon: Icon, text, isNew, active, onClick }) => (
         <div
             onClick={onClick}
-            className="flex items-center p-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
+            className={`flex items-center p-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer ${active ? 'bg-gray-200 dark:bg-gray-700' : ''
+                }`}
         >
             <Icon size={20} />
             <span className="ml-3">{text}</span>
@@ -113,109 +113,27 @@ const Dashboard = () => {
             </div>
             <div className="space-y-2">
                 <div onClick={() => navigate('/dashboard')}>
-                    <SidebarItem icon={Home} text="Resumo" />
+                    <SidebarItem icon={Home} text="Resumo" active={true} />
                 </div>
-                <SidebarItem icon={FileText} text="Tutoriais" isNew />
+                <SidebarItem icon={FileText} text="Tutoriais" isNew={true} />
                 <div onClick={() => navigate('/pages')}>
                     <SidebarItem icon={FileText} text="Páginas" />
                 </div>
-                <SidebarItem icon={Globe} text="Domínios" />
-                <SidebarItem icon={Database} text="Integrações" />
-                <SidebarItem icon={Users} text="Leads" />
-                <SidebarItem icon={MessageSquare} text="Mensagens padrão" />
-                <SidebarItem icon={HelpCircle} text="Suporte" />
-            </div>
-        </div>
-    );
-
-    const Header = () => (
-        <div className="flex justify-between items-center p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex space-x-4">
-                <button
-                    onClick={() => navigate('/pages')}
-                    className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-                >
-                    Páginas
-                </button>
-                <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white rounded-lg">
-                    Domínios
-                </button>
-                <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white rounded-lg">
-                    Integração
-                </button>
-                <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white rounded-lg">
-                    Leads
-                </button>
-            </div>
-
-            <div className="relative dropdown-container">
-                <button
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center space-x-3 focus:outline-none"
-                >
-                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
-                        {userData.firstName ? userData.firstName[0].toUpperCase() : 'U'}
-                    </div>
-                    <div className="text-left hidden md:block">
-                        <div className="text-gray-700 dark:text-white font-medium">
-                            {fullName || 'Usuário'}
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {userData.email || 'email@example.com'}
-                        </div>
-                    </div>
-                </button>
-
-                {isDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-20">
-                        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                            <div className="font-semibold text-gray-900 dark:text-white">
-                                {fullName || 'Usuário'}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {userData.email || 'email@example.com'}
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={() => {
-                                setIsDropdownOpen(false);
-                                setIsProfileModalOpen(true);
-                            }}
-                            className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
-                        >
-                            Meus dados
-                        </button>
-
-                        <button
-                            onClick={handleThemeChange}
-                            className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
-                        >
-                            {darkMode ? 'Modo claro' : 'Modo escuro'}
-                        </button>
-
-                        <button
-                            disabled
-                            className="block w-full text-left px-4 py-2 text-gray-400 dark:text-gray-500 hover:cursor-not-allowed"
-                        >
-                            Financeiro
-                        </button>
-
-                        <button
-                            disabled
-                            className="block w-full text-left px-4 py-2 text-gray-400 dark:text-gray-500 hover:cursor-not-allowed"
-                        >
-                            Meu plano
-                        </button>
-
-                        <button
-                            onClick={handleLogout}
-                            className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
-                        >
-                            Sair da conta
-                        </button>
-                    </div>
-                )}
+                <div onClick={() => navigate('/domains')}>
+                    <SidebarItem icon={Globe} text="Domínios" />
+                </div>
+                <div onClick={() => navigate('/integrations')}>
+                    <SidebarItem icon={Database} text="Integrações" />
+                </div>
+                <div onClick={() => navigate('/leads')}>
+                    <SidebarItem icon={Users} text="Leads" />
+                </div>
+                <div onClick={() => navigate('/messages')}>
+                    <SidebarItem icon={MessageSquare} text="Mensagens padrão" />
+                </div>
+                <div onClick={() => navigate('/support')}>
+                    <SidebarItem icon={HelpCircle} text="Suporte" />
+                </div>
             </div>
         </div>
     );
@@ -235,7 +153,17 @@ const Dashboard = () => {
             <Sidebar />
 
             <div className="flex-1 overflow-auto">
-                <Header />
+                {/* Importando o Header e passando as props necessárias */}
+                <Header
+                    userData={userData}
+                    fullName={fullName}
+                    isDropdownOpen={isDropdownOpen}
+                    setIsDropdownOpen={setIsDropdownOpen}
+                    darkMode={darkMode}
+                    handleThemeChange={handleThemeChange}
+                    handleLogout={handleLogout}
+                    setIsProfileModalOpen={setIsProfileModalOpen}
+                />
 
                 <div className="p-6">
                     {feedback && (

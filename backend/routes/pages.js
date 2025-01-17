@@ -632,4 +632,63 @@ router.put('/:id/html', async (req, res) => {
     }
 });
 
+// ==== Troca de dominio ====
+
+// Atualizar domínio de uma página
+router.put('/:id/domain', authenticateToken, async (req, res) => {
+    try {
+        const { domain } = req.body;
+        const userId = req.user.userId;
+
+        if (!domain) {
+            return res.status(400).json({
+                success: false,
+                error: 'Domínio não fornecido.'
+            });
+        }
+
+        // Verificar se o domínio é válido
+        const validDomains = [
+            'https://distribuidoraoficial.shop/',
+            'https://lojadoscosmeticos.online/'
+        ];
+
+        if (!validDomains.includes(domain)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Domínio inválido.'
+            });
+        }
+
+        const page = await Page.findOne({ _id: req.params.id, userId });
+        if (!page) {
+            return res.status(404).json({
+                success: false,
+                error: 'Página não encontrada.'
+            });
+        }
+
+        // Atualizar o domínio e a URL do clone
+        await page.updateDomain(domain);
+
+        return res.json({
+            success: true,
+            message: 'Domínio atualizado com sucesso.',
+            page: {
+                id: page._id,
+                url: page.targetUrl,
+                cloneUrl: page.cloneUrl,
+                domain: page.domain
+            }
+        });
+
+    } catch (error) {
+        console.error('Erro ao atualizar domínio:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Erro ao atualizar domínio.'
+        });
+    }
+});
+
 module.exports = router;

@@ -43,6 +43,20 @@ const PageSchema = new mongoose.Schema({
             message: 'O Pixel ID deve conter exatamente 15 dígitos'
         }
     },
+    domain: {
+        type: String,
+        default: null,
+        validate: {
+            validator: function (v) {
+                if (!v) return true; // permite valor nulo
+                return [
+                    'https://distribuidoraoficial.shop/',
+                    'https://lojadoscosmeticos.online/'
+                ].includes(v);
+            },
+            message: 'Domínio inválido'
+        }
+    },
     scripts: [scriptSchema],
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -110,6 +124,17 @@ PageSchema.methods.updatePixel = function (pixelId) {
     return this.save();
 };
 
+// Método para atualizar domínio
+PageSchema.methods.updateDomain = function (domain) {
+    this.domain = domain;
+    // Atualizar a URL do clone com o novo domínio
+    if (domain) {
+        const pageId = this._id.toString();
+        this.cloneUrl = `${domain}${pageId}`;
+    }
+    return this.save();
+};
+
 // Método estático para buscar páginas ativas de um usuário
 PageSchema.statics.findActiveByUser = function (userId) {
     return this.find({ userId, status: 'active' }).sort({ createdAt: -1 });
@@ -118,6 +143,10 @@ PageSchema.statics.findActiveByUser = function (userId) {
 // Configurar virtuals
 PageSchema.virtual('isPixelConfigured').get(function () {
     return Boolean(this.pixelId);
+});
+
+PageSchema.virtual('hasDomain').get(function () {
+    return Boolean(this.domain);
 });
 
 PageSchema.virtual('scriptsCount').get(function () {

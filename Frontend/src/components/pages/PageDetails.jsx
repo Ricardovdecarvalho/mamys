@@ -11,39 +11,38 @@ import { Modal } from 'react-responsive-modal';
 import 'react-responsive-modal/styles.css';
 import HtmlEditorModal from '../HtmlEditorModal';
 import ImageEditorModal from '../ImageEditorModal';
+import Header from '@/components/Header'; // Importando o Header
+import ProfileModal from '@/components/ProfileModal'; // Importando o ProfileModal
 
 const PageDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    // Estados
-    const [pageData, setPageData] = useState(null);
+    // Estados para o Header
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [darkMode, setDarkMode] = useState(true);
 
-    // PIXEL
+    // Estados adicionais
+    const [pageData, setPageData] = useState(null);
     const [pixelId, setPixelId] = useState('');
     const [showPixelInput, setShowPixelInput] = useState(false);
-
-    // SCRIPTS
     const [scripts, setScripts] = useState([]);
     const [showScriptInput, setShowScriptInput] = useState(false);
     const [newScriptContent, setNewScriptContent] = useState('');
     const [newScriptLocation, setNewScriptLocation] = useState('head');
-
-    // LINKS
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [links, setLinks] = useState([]);
     const [loadingLinks, setLoadingLinks] = useState(false);
     const [editingLinkIndex, setEditingLinkIndex] = useState(null);
     const [editingHref, setEditingHref] = useState('');
-
-    // HTML Editor
     const [isHtmlEditorOpen, setIsHtmlEditorOpen] = useState(false);
-
-    // Image Editor
     const [isImageEditorOpen, setIsImageEditorOpen] = useState(false);
 
-    // Carrega detalhes da página
+    // Dados do usuário
+    const userData = JSON.parse(localStorage.getItem('userData')) || {};
+    const fullName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+
     useEffect(() => {
         const theme = localStorage.getItem('theme');
         setDarkMode(theme === 'dark');
@@ -73,14 +72,19 @@ const PageDetails = () => {
         setDarkMode(newTheme);
         localStorage.setItem('theme', newTheme ? 'dark' : 'light');
         document.documentElement.classList.toggle('dark', newTheme);
+        setIsDropdownOpen(false);
     };
 
-    // Abre a página clonada
-    const openClonedPage = (page) => {
-        window.open(page.cloneUrl, '_blank');
+    // Logout
+    const handleLogout = () => {
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('userData');
+        localStorage.removeItem('token');
+        navigate('/login');
     };
 
-    // PIXEL - Adicionar
+    // PIXEL FACEBOOK & HTML EDITOR
     const handlePixelSubmit = async () => {
         const trimmedPixelId = pixelId.trim();
         const pixelIdRegex = /^\d{15}$/;
@@ -106,7 +110,6 @@ const PageDetails = () => {
         }
     };
 
-    // PIXEL - Remover
     const handleRemovePixel = async () => {
         if (!window.confirm('Tem certeza de que deseja remover o Pixel do Facebook desta página?')) {
             return;
@@ -126,14 +129,7 @@ const PageDetails = () => {
         }
     };
 
-    // Logout
-    const handleLogout = () => {
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('isAuthenticated');
-        navigate('/login');
-    };
-
-    // SCRIPTS - Adicionar
+    // SCRIPTS PERSONALIZADOS
     const handleAddScript = async () => {
         if (!newScriptContent.trim()) {
             toast.error('O conteúdo do script não pode estar vazio.');
@@ -161,8 +157,6 @@ const PageDetails = () => {
         }
     };
 
-
-    // Função handleRemoveScript
     const handleRemoveScript = async (scriptId) => {
         if (!scriptId) {
             console.error('ID do script não fornecido');
@@ -185,7 +179,7 @@ const PageDetails = () => {
         }
     };
 
-    // LINKS - Abrir modal
+    // LINKS
     const openLinkModal = async () => {
         setIsLinkModalOpen(true);
         setLoadingLinks(true);
@@ -204,7 +198,6 @@ const PageDetails = () => {
         }
     };
 
-    // LINKS - Fechar modal
     const closeLinkModal = () => {
         setIsLinkModalOpen(false);
         setLinks([]);
@@ -212,7 +205,6 @@ const PageDetails = () => {
         setEditingHref('');
     };
 
-    // LINKS - Editar
     const startEditingLink = (index, currentHref) => {
         setEditingLinkIndex(index);
         setEditingHref(currentHref);
@@ -307,51 +299,25 @@ const PageDetails = () => {
         </div>
     );
 
-    // Header
-    const Header = () => (
-        <div className="flex justify-between items-center p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex space-x-4">
-                <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white rounded-lg">
-                    Páginas
-                </button>
-                <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white rounded-lg">
-                    Domínios
-                </button>
-                <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white rounded-lg">
-                    Integração
-                </button>
-                <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white rounded-lg">
-                    Leads
-                </button>
-            </div>
-
-            <div className="flex items-center space-x-4">
-                <div className="flex items-center mr-4">
-                    <span className="text-sm text-gray-700 dark:text-gray-300 mr-2">
-                        {darkMode ? 'Dark' : 'Light'}
-                    </span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={darkMode}
-                            onChange={handleThemeChange}
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                    </label>
-                </div>
-            </div>
-        </div>
-    );
-
     // Render principal
-    if (!pageData) return <div>Carregando...</div>;
+    if (!pageData) return <div className="flex items-center justify-center h-screen">Carregando...</div>;
 
     return (
         <div className="flex h-screen bg-gray-50 dark:bg-gray-800">
             <Sidebar />
             <div className="flex-1 overflow-auto">
-                <Header />
+                {/* Importando o Header e passando as props necessárias */}
+                <Header
+                    userData={userData}
+                    fullName={fullName}
+                    isDropdownOpen={isDropdownOpen}
+                    setIsDropdownOpen={setIsDropdownOpen}
+                    darkMode={darkMode}
+                    handleThemeChange={handleThemeChange}
+                    handleLogout={handleLogout}
+                    setIsProfileModalOpen={setIsProfileModalOpen}
+                />
+
                 <div className="p-8">
                     <div className="max-w-4xl mx-auto">
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
@@ -665,7 +631,7 @@ const PageDetails = () => {
                             {/* BOTÃO P/ VISUALIZAR CLONE */}
                             <div className="mt-4 space-x-4 flex items-center">
                                 <button
-                                    onClick={() => openClonedPage(pageData)}
+                                    onClick={() => window.open(pageData.cloneUrl, '_blank')}
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center"
                                 >
                                     <Link size={16} className="mr-2" />
@@ -690,6 +656,12 @@ const PageDetails = () => {
                 isOpen={isImageEditorOpen}
                 onClose={() => setIsImageEditorOpen(false)}
                 pageId={id}
+            />
+
+            {/* Renderizar o Modal de Perfil */}
+            <ProfileModal
+                isOpen={isProfileModalOpen}
+                onClose={() => setIsProfileModalOpen(false)}
             />
         </div>
     );
